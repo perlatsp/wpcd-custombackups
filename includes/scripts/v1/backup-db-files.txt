@@ -1,0 +1,34 @@
+echo "done" && {
+  REQUIRED_PKG="sshpass"
+  PKG_OK=$(dpkg-query -W --showformat='${Status}\n' $REQUIRED_PKG|grep "install ok installed")
+  echo "Checking for $REQUIRED_PKG: $PKG_OK";
+  if [ "" = "$PKG_OK" ]; then
+    echo "No $REQUIRED_PKG. Setting up $REQUIRED_PKG."
+    sudo apt-get --yes install $REQUIRED_PKG
+  fi;
+  COMPRESSED_FILE=##COMPRESSED##
+  RESET_PERMISSIONS=false
+  cd /var/www/##DOMAIN## &&
+  mkdir -p databases &&
+  cd /var/www/##DOMAIN##/html &&
+  sudo -u ##DOMAIN## wp db export ##DBFILENAME## &&
+  mv /var/www/##DOMAIN##/html/##DBFILENAME## /var/www/##DOMAIN##/databases/##DBFILENAME## &&
+  sshpass -p ##SSHPASS## ssh -p ##SSHPORT## -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null ##SSHUSER##@##SSHHOST## mkdir -p ##REMOTELOCATION## &&
+
+  if [ "$COMPRESSED_FILE" = true ]; then
+    cd /var/www/##DOMAIN##/databases;
+    tar -zc ##DBFILENAME## | sshpass -p ##SSHPASS## ssh -p ##SSHPORT## -v -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null ##SSHUSER##@##SSHHOST## "cat > ##REMOTELOCATION##/##DBFILENAME##.tar.gz";
+    tar -zc /var/www/##DOMAIN##/html/* | sshpass -p ##SSHPASS## ssh -p ##SSHPORT## -v -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null ##SSHUSER##@##SSHHOST## "cat > ##REMOTELOCATION##/##FILENAME##.tar.gz"
+  fi;
+  if [ "$COMPRESSED_FILE" != true ]; then
+    sshpass -p ##SSHPASS## scp -P ##SSHPORT## -r -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null -r /var/www/##DOMAIN##/databases/##DBFILENAME## ##SSHUSER##@##SSHHOST##:##REMOTELOCATION##;
+
+    sshpass -p ##SSHPASS## ssh -p ##SSHPORT## -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null ##SSHUSER##@##SSHHOST## mkdir -p mkdir -p ##REMOTELOCATION##/##FILENAME##
+    sshpass -p ##SSHPASS## scp -P ##SSHPORT## -r -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null -r /var/www/##DOMAIN##/html/* ##SSHUSER##@##SSHHOST##:##REMOTELOCATION##/##FILENAME##;
+  fi;
+  if [ "$RESET_PERMISSIONS" = true ]; then
+    sshpass -p ##SSHPASS## ssh -p ##SSHPORT## -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null ##SSHUSER##@##SSHHOST## chown -R www-data:www-data ##REMOTELOCATION##;
+  fi;
+    mv ~/##SCRIPT_LOGS##.log.intermed ~/##SCRIPT_LOGS##.log.done;
+    sudo -E wget -q ##CALLBACK_URL##;
+  } > ##SCRIPT_LOGS##.log.intermed 2>&1 &

@@ -1,0 +1,29 @@
+echo "done" && {
+REQUIRED_PKG="sshpass"
+PKG_OK=$(dpkg-query -W --showformat='${Status}\n' $REQUIRED_PKG|grep "install ok installed")
+echo "Checking for $REQUIRED_PKG: $PKG_OK";
+if [ "" = "$PKG_OK" ]; then
+  echo "No $REQUIRED_PKG. Setting up $REQUIRED_PKG."
+  sudo apt-get --yes install $REQUIRED_PKG
+fi;
+COMPRESSED_FILE=##COMPRESSED##
+RESET_PERMISSIONS=false
+cd /var/www/##DOMAIN## &&
+mkdir -p databases &&
+cd /var/www/##DOMAIN##/html &&
+sudo -u ##DOMAIN## wp db export ##FILENAME## &&
+mv /var/www/##DOMAIN##/html/##FILENAME## /var/www/##DOMAIN##/databases/##FILENAME## &&
+sshpass -p ##SSHPASS## ssh -p ##SSHPORT## -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null ##SSHUSER##@##SSHHOST## mkdir -p ##REMOTELOCATION## &&
+cd /var/www/##DOMAIN##/databases;
+if [ "$COMPRESSED_FILE" = true ]; then
+  tar -zc ##FILENAME## | sshpass -p ##SSHPASS## ssh -p ##SSHPORT## -v -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null ##SSHUSER##@##SSHHOST## "cat > ##REMOTELOCATION##/##FILENAME##.tar.gz";
+fi;
+if [ "$COMPRESSED_FILE" != true ]; then
+  sshpass -p ##SSHPASS## scp -P ##SSHPORT## -r -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null -r /var/www/##DOMAIN##/databases/##FILENAME## ##SSHUSER##@##SSHHOST##:##REMOTELOCATION##;
+fi;
+if [ "$RESET_PERMISSIONS" = true ]; then
+  sshpass -p ##SSHPASS## ssh -p ##SSHPORT## -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null ##SSHUSER##@##SSHHOST## chown -R www-data:www-data ##REMOTELOCATION##;
+fi;
+  sudo -E wget -q ##CALLBACK_URL##;
+  mv ~/##SCRIPT_LOGS##.log.intermed ~/##SCRIPT_LOGS##.log.done;
+} > ##SCRIPT_LOGS##.log.intermed 2>&1 &
