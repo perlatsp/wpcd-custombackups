@@ -12,10 +12,10 @@ class WPCD_WordPress_TABS_APP_CUSTOMBACKUP extends WPCD_WORDPRESS_TABS {
 
 		$this->options = WPCD_Custom_BackUp_Settings::get_options();
 
-		$this->SSH_HOST = "CHANGEME";
-		$this->SSH_USER = "CHANGEME";
-		$this->SSH_PORT = "CHANGEME";
-		$this->SSH_PASSWORD = "CHANGEME";
+		$this->SSH_HOST = "";
+		$this->SSH_USER = "";
+		$this->SSH_PORT = "";
+		$this->SSH_PASSWORD = "";
 
 		$this->SSH_REMOTE_LOCATION = "/share/homes/perlat";
 
@@ -124,6 +124,25 @@ class WPCD_WordPress_TABS_APP_CUSTOMBACKUP extends WPCD_WORDPRESS_TABS {
 		$last_files_backup = $this->get_meta_value( $id,'site_last_files_backup',false);
 		$last_db_files_backup = $this->get_meta_value( $id,'site_last_db_files_backup',false);
 
+		$server_name = $this->get_server_name( $id );
+		$domain = $this->get_domain_name( $id );
+		$backup_location = $this->SSH_HOST.":".$this->SSH_REMOTE_LOCATION."/$server_name/$domain/".date('d_m_Y');
+
+		if( empty( $this->SSH_HOST ) || empty( $this->SSH_REMOTE_LOCATION ) || empty( $this->SSH_USER ) || empty( $this->SSH_PORT ) || empty( $this->SSH_PASSWORD ) ){
+
+			$actions['remote-location-heading'] = array(
+				'label'          => __( 'Backup Settings Missing', 'wpcd' ),
+				'type'           => 'custom_html',
+				'raw_attributes' => array(
+					'std' => '<div>
+						<p><strong style="color:red;">WPCD: Warning</strong> You have not set correctly the settings for the backups.</p>
+						<p>Set your backup settings <a target="_blank" href="'.admin_url().'/options-general.php?page=wpcd-custombackup">here</a></p>
+					</div>',
+				),
+			);
+			return $actions;
+		}
+
 		$actions['custombackup-add-on-heading'] = array(
 			'label'          => __( 'WP Backups', 'wpcd' ),
 			'type'           => 'heading',
@@ -175,7 +194,7 @@ class WPCD_WordPress_TABS_APP_CUSTOMBACKUP extends WPCD_WORDPRESS_TABS {
 
 		$instance = $this->get_app_instance_details( $id );
 
-		$domain = $this->get_domain_name( $id );
+
 
 
 		$actions['backup-files'] = array(
@@ -227,6 +246,15 @@ class WPCD_WordPress_TABS_APP_CUSTOMBACKUP extends WPCD_WORDPRESS_TABS {
 			);
 		}
 
+		if( $this->SSH_REMOTE_LOCATION ){
+			$actions['remote-location-heading'] = array(
+				'label'          => __( 'Backup Location', 'wpcd' ),
+				'type'           => 'custom_html',
+				'raw_attributes' => array(
+					'std' => '<input type="text" readonly value="'.$backup_location.'">',
+				),
+			);
+		}
 		return $actions;
 	}
 
@@ -453,7 +481,6 @@ class WPCD_WordPress_TABS_APP_CUSTOMBACKUP extends WPCD_WORDPRESS_TABS {
 				$additional
 			);
 		}
-		// wp_send_json($new_array);
 		return $new_array;
 	}
 
