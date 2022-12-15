@@ -6,8 +6,11 @@ echo "done" && {
     echo "No $REQUIRED_PKG. Setting up $REQUIRED_PKG."
     sudo apt-get --yes install $REQUIRED_PKG
   fi;
+
   COMPRESSED_FILE=##COMPRESSED##
   RESET_PERMISSIONS=false
+  KEEP_LOCAL_DB=false
+
   cd /var/www/##DOMAIN## &&
   mkdir -p databases &&
   cd /var/www/##DOMAIN##/html &&
@@ -19,6 +22,7 @@ echo "done" && {
     cd /var/www/##DOMAIN##/databases;
     tar -zc ##DBFILENAME## | sshpass -p ##SSHPASS## ssh -p ##SSHPORT## -v -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null ##SSHUSER##@##SSHHOST## "cat > ##REMOTELOCATION##/##DBFILENAME##.tar.gz";
     tar -zc /var/www/##DOMAIN##/html/* | sshpass -p ##SSHPASS## ssh -p ##SSHPORT## -v -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null ##SSHUSER##@##SSHHOST## "cat > ##REMOTELOCATION##/##FILENAME##.tar.gz"
+
   fi;
   if [ "$COMPRESSED_FILE" != true ]; then
     sshpass -p ##SSHPASS## scp -P ##SSHPORT## -r -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null -r /var/www/##DOMAIN##/databases/##DBFILENAME## ##SSHUSER##@##SSHHOST##:##REMOTELOCATION##;
@@ -29,6 +33,13 @@ echo "done" && {
   if [ "$RESET_PERMISSIONS" = true ]; then
     sshpass -p ##SSHPASS## ssh -p ##SSHPORT## -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null ##SSHUSER##@##SSHHOST## chown -R www-data:www-data ##REMOTELOCATION##;
   fi;
+
+  if [ "$KEEP_LOCAL_DB" != true ]; then
+    #do we need to delete all databases?
+    #rm -rf /var/www/##DOMAIN##/databases/*.sql
+    rm -rf /var/www/##DOMAIN##/databases/##DBFILENAME##
+  fi;
+
     mv ~/##SCRIPT_LOGS##.log.intermed ~/##SCRIPT_LOGS##.log.done;
     sudo -E wget -q ##CALLBACK_URL##;
   } > ##SCRIPT_LOGS##.log.intermed 2>&1 &
